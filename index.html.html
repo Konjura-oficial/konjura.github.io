@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>KONJURA — ACTIVE TRANSMISSION</title>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Orbitron:wght@400;700;900&family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --green: #00ff41;
+            --green-dim: rgba(0,255,65,0.4);
+            --green-faint: rgba(0,255,65,0.07);
+            --red: #ff2200;
+            --bg: #000a00;
+            --glow: 0 0 15px rgba(0,255,65,0.6);
+        }
+
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        @media (pointer:fine) { * { cursor: none !important; } }
+        html { scroll-behavior: smooth; }
+        
+        body {
+            background: var(--bg); color: var(--green);
+            font-family: 'Courier Prime', monospace;
+            overflow-x: hidden;
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker { 0% { opacity: 0.98; } 50% { opacity: 1; } 100% { opacity: 0.99; } }
+
+        body::before {
+            content: " "; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            z-index: 2000; background-size: 100% 3px, 3px 100%; pointer-events: none;
+        }
+
+        #rain-canvas { position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; opacity:0.1; pointer-events:none; }
+        
+        .scanline-mobile {
+            position: fixed; top: 0; left: 0; width: 100%; height: 8px;
+            background: rgba(0, 255, 65, 0.1); z-index: 1001; pointer-events: none;
+            animation: scanMove 10s linear infinite;
+        }
+        @keyframes scanMove { 0% { top: -10%; } 100% { top: 110%; } }
+
+        #cursor-outer { position:fixed; pointer-events:none; z-index:10000; width:30px; height:30px; border:1px solid var(--green); transform:translate(-50%,-50%); transition: 0.08s; }
+        #cursor-dot { position:fixed; pointer-events:none; z-index:10001; width:5px; height:5px; background:var(--green); transform:translate(-50%,-50%); box-shadow:var(--glow); }
+
+        /* ======= BOOT SCREEN ======= */
+        #boot-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 99999; display: flex; flex-direction: column;
+            justify-content: flex-start; align-items: flex-start; padding: 50px 60px;
+            font-family: 'VT323'; font-size: 1.05rem; color: var(--green);
+            overflow: hidden;
+        }
+        #boot-screen.fade-out { animation: bootFade 0.8s ease forwards; }
+        @keyframes bootFade { 0% { opacity: 1; } 100% { opacity: 0; pointer-events: none; } }
+        .boot-line { line-height: 1.7; white-space: pre; }
+        .boot-bar-total {
+            display: inline-block; border: 1px solid var(--green-dim);
+            height: 14px; width: 220px; vertical-align: middle; margin-right: 8px;
+            position: relative; overflow: hidden;
+        }
+        .boot-bar-fill { display: block; background: var(--green); height: 100%; width: 0; }
+
+        /* ======= NAV ======= */
+        .nav-wrapper {
+            position:fixed; top:0; left:0; width:100%; z-index:1000;
+            padding:0 20px; height:60px; display:flex; align-items:center;
+            background:rgba(0,10,0,0.95); border-bottom:1px solid var(--green-dim);
+            justify-content: space-between; gap: 10px;
+        }
+        .nav-logo { font-family:'Orbitron'; font-weight:900; font-size:1.4rem; color:var(--green); text-decoration:none; flex-shrink:0; }
+        .nav-logo::after { content: '_'; margin-left: 5px; animation: blink 0.8s infinite; }
+        @keyframes blink { 0% { opacity: 0; } 50% { opacity: 1; } }
+
+        .ticker-container { flex: 1; margin: 0 20px; overflow: hidden; white-space: nowrap; font-family: 'VT323'; font-size: 1.2rem; opacity: 0.6; min-width: 0; }
+        .ticker-text { display: inline-block; animation: marquee 25s linear infinite; }
+        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+
+        .nav-links { display:flex; list-style:none; flex-shrink:0; }
+        .nav-links a { font-size:0.7rem; color:var(--green); text-decoration:none; font-weight: bold; margin-left: 10px; }
+
+        #clearance-badge {
+            font-family: 'VT323'; font-size: 0.8rem; flex-shrink:0;
+            border: 1px solid var(--green-dim); padding: 2px 7px;
+            color: var(--green); white-space: nowrap; transition: 0.3s;
+        }
+        #clearance-badge.level-up { animation: levelFlash 0.5s ease; }
+        @keyframes levelFlash { 0% { background: var(--green); color: #000; } 100% { background: transparent; } }
+
+        section { padding:60px 20px; max-width:900px; margin:0 auto; position:relative; z-index:2; }
+
+        /* ======= HERO ======= */
+        #hero { height: 75vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+        .hero-title { 
+            font-family:'Orbitron'; font-weight:900; font-size:clamp(3rem, 12vw, 8rem); 
+            color:var(--green); text-shadow:var(--glow); letter-spacing:10px; transition: 0.1s;
+        }
+        .hero-title:hover { animation: bigGlitch 0.3s steps(1) infinite; cursor:crosshair; }
+        @keyframes bigGlitch {
+            0%  { text-shadow:4px 0 var(--red), -4px 0 #0ff; transform: skew(2deg); }
+            50% { text-shadow:-4px 0 var(--red), 4px 0 #0ff; transform: translate(3px, -3px); }
+        }
+        #daily-msg { font-family:'VT323'; font-size:0.9rem; opacity:0.45; margin-top:8px; letter-spacing:2px; }
+
+        /* ======= RADAR ======= */
+        #radar-section {
+            text-align: center; padding: 0 20px 60px;
+            max-width: 900px; margin: 0 auto; position: relative; z-index: 2;
+        }
+        #radar-title { font-family:'VT323'; font-size:1rem; opacity:0.7; margin-bottom:16px; letter-spacing:4px; }
+        #radar-canvas { display:block; margin:0 auto; border:1px solid var(--green-dim); box-shadow:0 0 20px rgba(0,255,65,0.1); }
+        .signal-stats { display:flex; justify-content:center; gap:50px; margin-top:20px; font-family:'VT323'; }
+        .stat-item { text-align:center; }
+        .stat-value { font-size:1.8rem; color:#fff; display:block; }
+        .stat-label { opacity:0.5; font-size:0.85rem; }
+
+        /* ======= COUNTER ======= */
+        #transmission-counter {
+            text-align:center; padding:20px 20px 60px;
+            max-width:900px; margin:0 auto; z-index:2; position:relative;
+        }
+        .counter-value { font-family:'Orbitron'; font-size:clamp(2rem,6vw,3.5rem); color:#fff; text-shadow:var(--glow); letter-spacing:3px; }
+        .counter-label { font-family:'VT323'; font-size:1rem; opacity:0.5; margin-top:5px; letter-spacing:5px; }
+
+        /* ======= DOSSIER ======= */
+        #origin { background:rgba(0,255,65,0.02); border:1px solid var(--green-dim); padding:40px; margin-bottom:40px; position:relative; }
+        .file-header { border-bottom:2px solid var(--green); margin-bottom:25px; padding-bottom:10px; display:flex; justify-content:space-between; align-items:flex-end; }
+        .confidential-tag { background:var(--red); color:white; padding:5px 15px; font-weight:bold; position:absolute; top:-15px; right:20px; transform:rotate(2deg); box-shadow:0 0 10px var(--red); }
+        .origin-text { line-height:1.8; font-size:0.95rem; text-align:justify; }
+        .highlight { color:#fff; background:rgba(0,255,65,0.2); padding:0 4px; }
+        .redacted { background:var(--green); color:var(--green); cursor:pointer; transition:0.3s; }
+        .redacted.revealed { background:rgba(0,255,65,0.2); color:#fff; }
+
+        /* ======= TRACKS ======= */
+        .track { 
+            display:grid; grid-template-columns:30px 60px 1fr auto; 
+            align-items:center; gap:15px; padding:12px; border:1px solid rgba(0,255,65,0.1); 
+            margin-bottom:10px; background:rgba(0,0,0,0.6); transition:0.3s; 
+        }
+        .track:hover { border-color:var(--green); background:rgba(0,255,65,0.05); }
+        .waveform { display:flex; align-items:flex-end; gap:2px; height:15px; margin-top:5px; }
+        .wave-bar { width:2px; background:var(--green); opacity:0.6; animation:bounce 0.5s ease-in-out infinite alternate; }
+        @keyframes bounce { 0% { height:2px; } 100% { height:15px; } }
+        .track-links { display:flex; gap:12px; margin-bottom:5px; justify-content:flex-end; font-size:1.1rem; }
+        .track-links a { color:inherit; text-decoration:none; opacity:0.6; transition:0.2s; }
+        .track-links a:hover { color:#fff; opacity:1; text-shadow:var(--glow); transform:scale(1.1); display:inline-block; }
+        .btn-decode {
+            font-family:'VT323'; font-size:0.85rem; color:var(--green);
+            border:1px solid var(--green-dim); padding:3px 8px; cursor:pointer;
+            background:transparent; display:block; width:100%; margin-top:5px;
+        }
+        .btn-decode:hover { background:var(--green); color:#000; }
+        .info-panel {
+            grid-column:1/-1; display:none; padding:12px;
+            background:rgba(0,255,65,0.08); border-top:1px dashed var(--green);
+            font-family:'VT323'; font-size:1rem; line-height:1.5; color:#fff;
+            white-space: pre-line;
+        }
+
+        /* ======= TERMINAL ======= */
+        .terminal-box { background:#000; border:1px solid var(--green); padding:20px; font-family:'VT323'; box-shadow:var(--glow); margin-bottom:40px; }
+        .terminal-input { background:transparent; border:none; color:var(--green); font-family:'VT323'; font-size:1.2rem; width:80%; outline:none; }
+        #term-output { margin-top:10px; color:#fff; min-height:60px; white-space:pre-line; }
+        .term-hint { font-family:'VT323'; font-size:0.82rem; opacity:0.45; margin-bottom:8px; }
+
+        /* ======= ACCESS CODE ======= */
+        #access-section { max-width:900px; margin:0 auto; padding:0 20px 60px; position:relative; z-index:2; }
+        .access-box { border:1px solid var(--red); padding:20px; background:rgba(255,34,0,0.03); font-family:'VT323'; position:relative; }
+        .access-box::before {
+            content:'⚠ CLASSIFIED ACCESS POINT ⚠'; position:absolute; top:-12px; left:20px;
+            background:var(--bg); padding:0 10px; color:var(--red); font-size:0.9rem;
+        }
+        #access-input {
+            background:transparent; border:none; border-bottom:1px solid var(--red);
+            color:var(--red); font-family:'VT323'; font-size:1.4rem;
+            width:100%; outline:none; margin-top:10px; letter-spacing:4px; text-transform:uppercase;
+        }
+        #access-input::placeholder { color:rgba(255,34,0,0.3); }
+        #access-output {
+            margin-top:15px; min-height:40px; font-size:1rem; color:#fff;
+            white-space:pre-line; border-top:1px dashed rgba(255,34,0,0.3); padding-top:10px;
+        }
+        #access-output.success { color:var(--green); }
+        #access-output.fail { color:var(--red); }
+
+        /* ======= CONTACT / FOOTER ======= */
+        .contact-icon { color:var(--green); transition:all 0.3s ease; display:inline-block; }
+        .contact-icon:hover { transform:scale(1.2); color:#fff; text-shadow:var(--glow); }
+        .footer-data { text-align:center; border-top:1px solid var(--green-dim); padding:40px 0; font-family:'VT323'; }
+
+        /* ======= DOM GLITCH ======= */
+        @keyframes domGlitch {
+            0%   { transform:translateX(0); opacity:1; }
+            15%  { transform:translateX(-4px); color:var(--red); }
+            30%  { transform:translateX(4px); color:#0ff; }
+            50%  { transform:translateX(-2px); color:var(--green); }
+            100% { transform:translateX(0); opacity:1; }
+        }
+        .glitch-dom { animation:domGlitch 0.4s steps(1) forwards; }
+    </style>
+</head>
+<body>
+
+<!-- BOOT SCREEN -->
+<div id="boot-screen">
+    <div id="boot-lines"></div>
+</div>
+
+<div class="scanline-mobile"></div>
+<canvas id="rain-canvas"></canvas>
+<div id="cursor-outer"></div>
+<div id="cursor-dot"></div>
+
+<nav class="nav-wrapper">
+    <a href="#" class="nav-logo">KONJURA</a>
+    <div class="ticker-container">
+        <div class="ticker-text">THE TRANCE IS OUT THERE // ENCRYPTED TRANSMISSION // LEVEL 5 ACCESS // REMEMBER: TRUST NO ONE // </div>
+    </div>
+    <ul class="nav-links">
+        <li><a href="#origin">[ DOSSIER ]</a></li>
+        <li><a href="#music">[ ARCHIVES ]</a></li>
+        <li><a href="#contact">[ CONTACT ]</a></li>
+    </ul>
+    <div id="clearance-badge">CLEARANCE: LVL 1</div>
+</nav>
+
+<section id="hero">
+    <p style="font-family:'VT323'; letter-spacing:5px; opacity:0.5; margin-bottom:10px;">NODE_ID: TRANCE-808-OS</p>
+    <h1 class="hero-title">KONJURA</h1>
+    <div id="status-console" style="font-family:'VT323'; color:#fff; font-size:1.3rem;">> INITIALIZING TERMINAL...</div>
+    <div id="daily-msg"></div>
+</section>
+
+<!-- RADAR -->
+<div id="radar-section">
+    <div id="radar-title">[ SIGNAL_PROPAGATION_MAP // ORIGIN: MADRID ]</div>
+    <canvas id="radar-canvas" width="280" height="280"></canvas>
+    <div class="signal-stats">
+        <div class="stat-item"><span class="stat-value">138</span><span class="stat-label">BPM FREQ</span></div>
+        <div class="stat-item"><span class="stat-value">6</span><span class="stat-label">TRANSMISSIONS</span></div>
+        <div class="stat-item"><span class="stat-value">&#8734;</span><span class="stat-label">SIGNAL RANGE</span></div>
+    </div>
+</div>
+
+<!-- COUNTER -->
+<div id="transmission-counter">
+    <div class="counter-value" id="counter-display">000,000</div>
+    <div class="counter-label">TRANSMISSIONS INTERCEPTED WORLDWIDE</div>
+</div>
+
+<section id="origin">
+    <div class="file-header">
+        <div>
+            <h2 style="font-family:'Orbitron'; font-size:1.5rem;">DOSSIER: KONJURA</h2>
+            <p style="font-size:0.7rem; opacity:0.6;">REF: 808-FAST-TRK // OPEN CASE</p>
+        </div>
+        <div class="confidential-tag">TOP SECRET</div>
+    </div>
+    <div class="origin-text">
+        <p><span class="highlight">SUBJECT:</span> KONJURA. A sound entity identified after decades of activity in the digital underground. The first traces of its existence date back to the <span class="highlight">FastTracker</span> era, where it began shaping frequencies that challenged the logic of the time.</p>
+        <br>
+        <p>Musical intelligence reports highlight fundamental pieces such as <span class="highlight">"Across your mind,"</span> compositions that acted as catalysts in the early electronic scene. The trail of Konjura did not go unnoticed by observers: the prestigious <span class="highlight">Horna Magazine</span> has already referenced it.</p>
+        <br>
+        <p><span class="highlight">STATUS:</span> Operating from the shadows for <span class="redacted" title="Click to reveal" onclick="revealRedacted(this)">MANY YEARS</span>, its technique has evolved while always maintaining that analog and mysterious essence.</p>
+    </div>
+</section>
+
+<section id="music">
+    <h2 style="font-family:'Orbitron'; margin-bottom:30px; font-size:1.2rem; border-left:4px solid var(--green); padding-left:15px;">AUDIO_ARCHIVES</h2>
+    <div id="tracks-list"></div>
+</section>
+
+<!-- TERMINAL -->
+<section>
+    <div class="terminal-box">
+        <div>KONJURA_OS v1.0.4 — ENTER COMMAND:</div>
+        <div class="term-hint">[ HELP ] [ STATUS ] [ INFO ] [ SCAN ] [ DECRYPT ] [ HORNA ] [ PLAY &lt;song&gt; ] [ CLEAR ]</div>
+        <span style="color:var(--green)">&gt; </span><input type="text" id="term-input" class="terminal-input" autocomplete="off" placeholder="...">
+        <div id="term-output"></div>
+    </div>
+</section>
+
+<!-- ACCESS CODE -->
+<div id="access-section">
+    <div class="access-box">
+        <div style="font-family:'VT323'; font-size:1rem; color:var(--red);">
+            CLASSIFIED ACCESS TERMINAL — LEVEL 5 REQUIRED<br>
+            <span style="opacity:0.55; font-size:0.85rem;">Enter a song codename to decrypt classified intel. Try them all.</span>
+        </div>
+        <input type="text" id="access-input" placeholder="ENTER SONG CODENAME..." autocomplete="off">
+        <div id="access-output"></div>
+    </div>
+</div>
+
+<section id="contact" style="text-align:center;">
+    <div style="font-size:2rem; display:flex; justify-content:center; gap:40px; margin-bottom:20px;">
+        <a href="https://open.spotify.com/intl-es/artist/3VcftgQgbvLnIxtWVNMwz6?si=ZZmpscEnRgW0j9IFJizq6Q" target="_blank" class="contact-icon"><i class="fa-brands fa-spotify"></i></a>
+        <a href="https://www.tiktok.com/@konjura_oficial" target="_blank" class="contact-icon"><i class="fa-brands fa-tiktok"></i></a>
+        <a href="https://youtube.com/channel/UCZEjViLzylaHAOdvMQYElOA?si=p_ecds6RebXtBTVT" target="_blank" class="contact-icon"><i class="fa-brands fa-youtube"></i></a>
+        <a href="mailto:konjuraoficcial@gmail.com" class="contact-icon"><i class="fa-solid fa-envelope"></i></a>
+    </div>
+    <div class="footer-data">
+        <h3 style="letter-spacing:10px; color:#fff;">THE TRANCE IS OUT THERE</h3>
+        <p id="footer-coords" style="opacity:0.6; margin-top:10px;">LAT: 40.4168 N // LON: 3.7038 W</p>
+    </div>
+</section>
+
+<script>
+/* ===== BOOT SCREEN ===== */
+const bootSequence = [
+    [0,    "KONJURA_OS v1.0.4 — INITIALIZING..."],
+    [200,  " "],
+    [400,  "BIOS CHECK.................. OK"],
+    [600,  "MEMORY MODULE.............. 808 KB"],
+    [800,  "TRANCE SIGNAL DETECTOR..... ONLINE"],
+    [1000, "FASTRACKER ENGINE.......... LOADED"],
+    [1200, "UPLIFTING FREQUENCY........ DETECTED"],
+    [1400, " "],
+    [1500, "LOADING KONJURA DATABASE..."],
+    [1600, "BAR"],
+    [2800, " "],
+    [2900, "CLEARANCE LEVEL: 1 ASSIGNED"],
+    [3100, "MADRID NODE: ACTIVE // STABLE TRANSMISSION"],
+    [3300, " "],
+    [3400, ">> ACCESS GRANTED. WELCOME, AGENT."],
+];
+
+const bootContainer = document.getElementById('boot-lines');
+
+bootSequence.forEach(([delay, content]) => {
+    setTimeout(() => {
+        if (content === "BAR") {
+            const wrap = document.createElement('div');
+            wrap.className = 'boot-line';
+            wrap.innerHTML = `LOADING: <span class="boot-bar-total"><span class="boot-bar-fill" id="bfill"></span></span><span id="bpct">0%</span>`;
+            bootContainer.appendChild(wrap);
+            let p = 0;
+            const iv = setInterval(() => {
+                p = Math.min(p + Math.random() * 7 + 2, 100);
+                const f = document.getElementById('bfill');
+                const b = document.getElementById('bpct');
+                if (f) f.style.width = (p * 2.2) + 'px';
+                if (b) b.textContent = Math.floor(p) + '%';
+                if (p >= 100) clearInterval(iv);
+            }, 55);
+        } else {
+            const div = document.createElement('div');
+            div.className = 'boot-line';
+            div.textContent = content;
+            bootContainer.appendChild(div);
+        }
+    }, delay);
+});
+
+setTimeout(() => {
+    const boot = document.getElementById('boot-screen');
+    boot.classList.add('fade-out');
+    setTimeout(() => { boot.style.display = 'none'; }, 800);
+    startClearanceTimer();
+    startDomGlitch();
+}, 4100);
+
+
+/* ===== MATRIX RAIN ===== */
+const canvas = document.getElementById('rain-canvas');
+const ctx = canvas.getContext('2d');
+function resRain() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener('resize', resRain); resRain();
+const drops = Array(Math.floor(canvas.width / 20)).fill(1);
+setInterval(() => {
+    ctx.fillStyle = 'rgba(0,10,0,0.08)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#0f0'; ctx.font = '15px monospace';
+    drops.forEach((y,i) => {
+        ctx.fillText(Math.random()>0.5?"0":"1", i*20, y*20);
+        if (y*20 > canvas.height && Math.random() > 0.98) drops[i] = 0;
+        drops[i]++;
+    });
+}, 60);
+
+
+/* ===== CURSOR ===== */
+document.addEventListener('mousemove', e => {
+    document.getElementById('cursor-outer').style.left = e.clientX + 'px';
+    document.getElementById('cursor-outer').style.top  = e.clientY + 'px';
+    document.getElementById('cursor-dot').style.left   = e.clientX + 'px';
+    document.getElementById('cursor-dot').style.top    = e.clientY + 'px';
+    incrementClearance(0.05);
+});
+
+
+/* ===== RADAR ===== */
+const rc = document.getElementById('radar-canvas');
+const rctx = rc.getContext('2d');
+const RCX = rc.width / 2, RCY = rc.height / 2, RR = 125;
+let radarAngle = 0;
+const nodes = Array.from({length: 14}, () => ({
+    a: Math.random()*Math.PI*2, d: 25+Math.random()*95,
+    life: Math.floor(Math.random()*80), maxLife: 60+Math.random()*80
+}));
+function drawRadar() {
+    rctx.clearRect(0,0,rc.width,rc.height);
+    rctx.fillStyle='#000a00'; rctx.fillRect(0,0,rc.width,rc.height);
+    [30,60,90,RR].forEach(r => {
+        rctx.beginPath(); rctx.arc(RCX,RCY,r,0,Math.PI*2);
+        rctx.strokeStyle='rgba(0,255,65,0.12)'; rctx.lineWidth=1; rctx.stroke();
+    });
+    rctx.strokeStyle='rgba(0,255,65,0.1)'; rctx.lineWidth=1;
+    rctx.beginPath(); rctx.moveTo(RCX,RCY-RR); rctx.lineTo(RCX,RCY+RR); rctx.stroke();
+    rctx.beginPath(); rctx.moveTo(RCX-RR,RCY); rctx.lineTo(RCX+RR,RCY); rctx.stroke();
+
+    rctx.save(); rctx.translate(RCX,RCY); rctx.rotate(radarAngle);
+    const grad = rctx.createLinearGradient(0,0,RR,0);
+    grad.addColorStop(0,'rgba(0,255,65,0.55)'); grad.addColorStop(1,'rgba(0,255,65,0)');
+    rctx.beginPath(); rctx.moveTo(0,0); rctx.arc(0,0,RR,-0.45,0.45); rctx.closePath();
+    rctx.fillStyle=grad; rctx.fill(); rctx.restore();
+
+    nodes.forEach(n => {
+        n.life++;
+        if (n.life > n.maxLife) { n.life=0; n.maxLife=60+Math.random()*80; n.a=Math.random()*Math.PI*2; n.d=25+Math.random()*95; }
+        const alpha = 1 - n.life/n.maxLife;
+        const nx = RCX + Math.cos(n.a)*n.d, ny = RCY + Math.sin(n.a)*n.d;
+        rctx.beginPath(); rctx.arc(nx,ny,2.5,0,Math.PI*2);
+        rctx.fillStyle=`rgba(0,255,65,${alpha})`; rctx.fill();
+        if (n.life < 18) {
+            rctx.beginPath(); rctx.arc(nx,ny,(n.life/18)*10,0,Math.PI*2);
+            rctx.strokeStyle=`rgba(0,255,65,${0.4-n.life*0.022})`; rctx.lineWidth=1; rctx.stroke();
+        }
+    });
+    rctx.beginPath(); rctx.arc(RCX,RCY,4,0,Math.PI*2);
+    rctx.fillStyle='#fff'; rctx.fill();
+    rctx.fillStyle='rgba(0,255,65,0.7)'; rctx.font='10px VT323,monospace';
+    rctx.fillText('MAD',RCX+6,RCY-6);
+    radarAngle += 0.03;
+    requestAnimationFrame(drawRadar);
+}
+drawRadar();
+
+
+/* ===== COUNTER ===== */
+const BASE_COUNT = 147832;
+let counterVal = BASE_COUNT;
+const counterEl = document.getElementById('counter-display');
+function fmtCount(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,","); }
+let animStart = null;
+function animCounter(ts) {
+    if (!animStart) animStart = ts;
+    const p = Math.min((ts-animStart)/2000,1);
+    counterEl.textContent = fmtCount(Math.floor(p*BASE_COUNT));
+    if (p < 1) requestAnimationFrame(animCounter);
+    else counterEl.textContent = fmtCount(BASE_COUNT);
+}
+setTimeout(()=>requestAnimationFrame(animCounter), 4300);
+setInterval(()=>{ counterVal+=Math.floor(Math.random()*3); counterEl.textContent=fmtCount(counterVal); }, 5000);
+
+
+/* ===== SONGS DATA ===== */
+const songsData = [
+    { name:"ORION", release:"April 08, 2026", feedback:"Stellar transmission successfully captured.",
+      secret:"Signal originated from Orion's Belt sector. Frequency: 138 BPM. The constellation guided its creation on a winter night in Madrid, 2026.",
+      urls:{spotify:"https://open.spotify.com/intl-es/album/1Q89FEsM2oB7NaMP7TjH8e?si=2Tg6HukOTxWPURqiC0DQWQ",youtube:"https://youtu.be/Ewb9eC4CV7I?si=m7xrnTg2x0W8Mlfv",itunes:"https://music.apple.com/us/song/orion/1892181975",amazon:"https://music.amazon.com/albums/B0GWKN5SWN?marketplaceId=ATVPDKIKX0DER&musicTerritory=US&ref=dm_sh_cJpI3P9AqjlegXod1ShPZgSCE"}},
+    { name:"ALWAYS POSITIVE", release:"March 18, 2026", feedback:"Positive energy propagating through the network.",
+      secret:"Coded during a solar storm. The positivity frequency resonates at 432 Hz — the frequency of the universe itself. Trust the signal.",
+      urls:{spotify:"https://open.spotify.com/intl-es/track/385jFl5OFlmzUEme5A5hLM?si=05ffaa06c29f4701",youtube:"https://youtu.be/G6rlJZnaN3g?si=EzyxGSYogNkGhJU_",itunes:"https://music.apple.com/us/song/always-positive/1886373113",amazon:"https://music.amazon.com/albums/B0GT2BMW8K?marketplaceId=ATVPDKIKX0DER&musicTerritory=US&ref=dm_sh_Aom4aWv2kpqj1JGr6gnFB7g2B"}},
+    { name:"THE MISSION", release:"November 12, 2025", feedback:"Frequencies detected in dancefloor cores.",
+      secret:"Mission briefing: Deploy uplifting frequencies into dancefloor sectors worldwide. Collaboration: CRIS VAL. Operation status: SUCCESS.",
+      urls:{spotify:"https://open.spotify.com/intl-es/track/0d8ozvokdEILj0iiUdcUUq?si=0f1138f7845e4f44",youtube:"https://youtu.be/oFBOxB1o3To?si=AegTIByNFj3sSCKp",itunes:"https://music.apple.com/us/album/the-mission-feat-cris-val-single/1853819909",amazon:"https://music.amazon.com/albums/B0G27CMLD2?marketplaceId=ATVPDKIKX0DER&musicTerritory=US&ref=dm_sh_LRQZmpOecP2D6eDmVsIN5E4xQ"}},
+    { name:"DEVOTION", release:"December 31, 2025", feedback:"Absolute dedication to the Uplifting frequency.",
+      secret:"Released at 23:59 on December 31st. The devotion to trance transcends the calendar. New Year. Same signal. Eternal dedication.",
+      urls:{spotify:"https://open.spotify.com/intl-es/track/47UiTm1Mtjo7e75eUU9Ib9?si=e9b2047e5e15431f",youtube:"https://youtu.be/tm0F7kJurkE?si=3a8ILaV6_rXG8JZA",itunes:"https://music.apple.com/us/album/devotion-single/1865643799",amazon:"https://music.amazon.com/albums/B0GDJZWZ78?marketplaceId=ATVPDKIKX0DER&musicTerritory=US&ref=dm_sh_e3e9lw15Hp0bTFh3iUpqqMBtf"}},
+    { name:"SPACE INVADERS", release:"February 13, 2026", feedback:"Tracker infiltration completed.",
+      secret:"Inspired by early arcade systems. The 8-bit warriors were the first aliens to invade the dance floor. They never left. Game over: trance wins.",
+      urls:{spotify:"https://open.spotify.com/intl-es/album/4szsFc9w8DaMJnbyzQnpfj?si=b02qfvQ6RcGDVSZNB8h1zw",youtube:"https://youtu.be/nr78yWo0YJs?si=BIMbsu1OYw14qnNM",itunes:"https://music.apple.com/us/song/space-invaders/1877531112",amazon:"https://music.amazon.com/albums/B0GN967CL1?marketplaceId=ATVPDKIKX0DER&musicTerritory=US&ref=dm_sh_VgBsUoPCHnbAWn47K7NS9hiHu"}},
+    { name:"HIGH ENERGY", release:"December 07, 2025", feedback:"Energy spike detected in digital sector.",
+      secret:"The energy reading broke the meters. Instruments overloaded. Only the signal survived. HIGH ENERGY is not a title — it is a warning.",
+      urls:{spotify:"https://open.spotify.com/intl-es/album/7CAUmhypiuE1U2cTQJzoKf?si=9K3xwqU0RdOHTtsZ_oZPDg",youtube:"https://youtu.be/L7SrFDpyd8Y?si=qLnAfS53M_6nltut",itunes:"https://music.apple.com/us/song/high-energy/1859449550",amazon:"https://music.amazon.com/albums/B0G5LRG73V?marketplaceId=ATVPDKIKX0DER&musicTerritory=US&ref=dm_sh_W9fPyMdbff6eByvXzGNjOzjt5"}}
+];
+
+/* ===== BUILD TRACK LIST ===== */
+const tList = document.getElementById('tracks-list');
+songsData.forEach((s,i) => {
+    const div = document.createElement('div');
+    div.className = 'track';
+    let wave = '';
+    for(let j=0;j<10;j++) wave+=`<div class="wave-bar" style="animation-delay:${Math.random()}s"></div>`;
+    div.innerHTML = `
+        <div style="font-family:'VT323';opacity:0.4;font-size:0.8rem;">[${i+1}]</div>
+        <div style="width:60px;height:60px;border:1px solid var(--green-dim);overflow:hidden;">
+            <img src="./Logoscanciones/${s.name}.jpg" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='https://via.placeholder.com/60/001a00/00ff00?text=K'">
+        </div>
+        <div>
+            <div style="font-weight:bold;font-size:0.8rem;">${s.name}</div>
+            <div class="waveform">${wave}</div>
+        </div>
+        <div style="text-align:right;">
+            <div class="track-links">
+                <a href="${s.urls.spotify}" target="_blank"><i class="fa-brands fa-spotify" title="Spotify"></i></a>
+                <a href="${s.urls.itunes}" target="_blank"><i class="fa-brands fa-apple" title="iTunes"></i></a>
+                <a href="${s.urls.youtube}" target="_blank"><i class="fa-brands fa-youtube" title="YouTube"></i></a>
+                <a href="${s.urls.amazon}" target="_blank"><i class="fa-brands fa-amazon" title="Amazon Music"></i></a>
+            </div>
+            <button class="btn-decode" onclick="toggleInfo(this,${i})">[ DECODE ]</button>
+        </div>
+        <div class="info-panel" id="panel-${i}"></div>`;
+    tList.appendChild(div);
+});
+
+function toggleInfo(btn, id) {
+    const panel = document.getElementById(`panel-${id}`);
+    const visible = panel.style.display === 'block';
+    panel.style.display = visible ? 'none' : 'block';
+    btn.innerText = visible ? '[ DECODE ]' : '[ HIDE ]';
+    if (!visible) {
+        const s = songsData[id];
+        const txt = `> RELEASE_DATE: ${s.release}\n> STYLE: Uplifting Trance\n> REPORT_DATA: "${s.feedback}"`;
+        typeText(panel, txt);
+        incrementClearance(2);
+    }
+}
+
+
+/* ===== TERMINAL ===== */
+const termInput = document.getElementById('term-input');
+const termOutput = document.getElementById('term-output');
+const songNames = songsData.map(s => s.name.toUpperCase());
+
+const cmdDB = {
+    HELP:    ["COMMANDS: STATUS / INFO / SCAN / DECRYPT / HORNA / PLAY <song> / CLEAR\nTIP: All song names work in the ACCESS TERMINAL below."],
+    STATUS:  ["SYSTEM NOMINAL. TRANCE SIGNAL AT 100%.\nMADRID NODE: ACTIVE. ALL SECTORS CLEAR.",
+              "WARNING: HIGH SONIC RADIATION. DO NOT LOWER VOLUME.",
+              "SIGNAL INTEGRITY: 100%. FASTRACKER ENGINE: RUNNING."],
+    ACCESS:  ["ERROR: LEVEL 5 REQUIRED. TRACING IP...","ACCESS DENIED. TRUST NO ONE.","ATTEMPT LOGGED. AGENT FLAGGED."],
+    INFO:    ["KONJURA: PROJECT STARTED IN THE FASTRACKER ERA.\nDetected by HORNA MAGAZINE.\nDecades operating from the shadows.",
+              "CLASSIFICATION: UPLIFTING TRANCE ENTITY\nORIGIN: MADRID, SPAIN\nFIRST SIGNAL: FASTRACKER v2 ERA"],
+    SCAN:    ["SCANNING...\n6 AUDIO FILES DECLASSIFIED.\nUPLIFTING FREQUENCY: 138 BPM CONFIRMED.\nMATRIX RAIN: NOMINAL."],
+    DECRYPT: ["DECRYPTING SIGNAL...\n01001011 01001111 01001110 01001010 01010101 01010010 01000001\n\nDECODED: K-O-N-J-U-R-A\n\nThe signal was always there. You just needed to listen."],
+    HORNA:   ["LOADING HORNA_MAGAZINE DATABASE...\n\nReference found: KONJURA cited as emerging Uplifting Trance force.\nFull quote: [CLASSIFIED — LEVEL 5 REQUIRED]\n\nSeek higher clearance to access full record."]
+};
+
+termInput.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const raw = termInput.value.trim();
+    const cmd = raw.toUpperCase();
+    termInput.value = '';
+    incrementClearance(2);
+    if (cmd === 'CLEAR') { termOutput.innerText=''; return; }
+    let resp;
+    if (cmd.startsWith('PLAY ')) {
+        const t = cmd.slice(5).trim();
+        const song = songsData.find(s=>s.name.toUpperCase()===t);
+        if (song) { resp=`> ACCESSING ${song.name}...\n> OPENING ON YOUTUBE...\n> SIGNAL LOCKED.`; setTimeout(()=>window.open(song.urls.youtube,'_blank'),800); }
+        else resp = `> UNKNOWN TRACK: ${t}\n> AVAILABLE: ${songNames.join(' / ')}`;
+    } else if (cmdDB[cmd]) {
+        const opts = cmdDB[cmd];
+        resp = '> ' + opts[Math.floor(Math.random()*opts.length)];
+    } else if (songNames.includes(cmd)) {
+        resp = `> TRACK RECOGNIZED: ${cmd}\n> USE 'PLAY ${cmd}' TO OPEN.\n> USE ACCESS TERMINAL BELOW FOR CLASSIFIED INTEL.`;
+    } else {
+        resp = `> UNKNOWN COMMAND: ${cmd}\n> TYPE 'HELP' FOR COMMANDS.`;
+    }
+    typeText(termOutput, resp);
+});
+
+
+/* ===== ACCESS TERMINAL ===== */
+const accessInput  = document.getElementById('access-input');
+const accessOutput = document.getElementById('access-output');
+const unlocked = new Set();
+
+accessInput.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const code = accessInput.value.trim().toUpperCase();
+    accessInput.value = '';
+    incrementClearance(2);
+    const song = songsData.find(s=>s.name.toUpperCase()===code);
+    if (song) {
+        unlocked.add(code);
+        accessOutput.className = 'success';
+        typeText(accessOutput, `> CODENAME VERIFIED: ${code}\n> DECRYPTING CLASSIFIED FILE...\n\n[DECLASSIFIED]\n${song.secret}\n\n> ${unlocked.size}/${songsData.length} FILES DECRYPTED.`);
+        incrementClearance(10);
+    } else {
+        accessOutput.className = 'fail';
+        typeText(accessOutput, `> CODENAME NOT RECOGNIZED: ${code}\n> ACCESS DENIED. ATTEMPT LOGGED.\n> HINT: Song titles are the keys.`);
+    }
+});
+
+
+/* ===== TYPE EFFECT ===== */
+function typeText(el, text) {
+    el.innerText = '';
+    let i = 0;
+    const iv = setInterval(() => {
+        el.innerText += text[i] ?? '';
+        i++;
+        if (i >= text.length) clearInterval(iv);
+    }, 14);
+}
+
+
+/* ===== CLEARANCE SYSTEM ===== */
+let clearanceScore = 0;
+let clearanceLevel = 1;
+const badge = document.getElementById('clearance-badge');
+const milestones = [
+    { lvl:2, score:12,  msg:"CLEARANCE UPGRADED: LVL 2\n> Additional sectors unlocked." },
+    { lvl:3, score:30,  msg:"CLEARANCE UPGRADED: LVL 3\n> Deep scan capabilities enabled." },
+    { lvl:4, score:60,  msg:"CLEARANCE UPGRADED: LVL 4\n> Shadow protocols active." },
+    { lvl:5, score:120, msg:"CLEARANCE UPGRADED: LVL 5 — MAXIMUM\n> You are part of the inner circle, Agent.\n> ALL CLASSIFIED FILES UNLOCKED.\n\n[DECLASSIFIED] KONJURA was not always a name. Before the identity was assigned, the signal existed without a label — pure frequency, no source, no face. Only the sound knew its origin." }
+];
+
+function incrementClearance(pts) {
+    clearanceScore += pts;
+    milestones.forEach(m => {
+        if (clearanceScore >= m.score && clearanceLevel < m.lvl) {
+            clearanceLevel = m.lvl;
+            badge.textContent = `CLEARANCE: LVL ${clearanceLevel}`;
+            badge.classList.add('level-up');
+            setTimeout(()=>badge.classList.remove('level-up'), 600);
+            setTimeout(()=>typeText(termOutput, '\n⚡ SYSTEM ALERT:\n'+m.msg), 200);
+        }
+    });
+}
+
+function startClearanceTimer() {
+    setInterval(()=>incrementClearance(1), 8000);
+}
+
+
+/* ===== REDACTED REVEAL ===== */
+function revealRedacted(el) {
+    el.classList.add('revealed');
+    el.onclick = null; el.title = '';
+    incrementClearance(3);
+}
+
+
+/* ===== RANDOM DOM GLITCH ===== */
+function startDomGlitch() {
+    const targets = ['.hero-title','.nav-logo','.confidential-tag','.ticker-text','h2'];
+    function doGlitch() {
+        const sel = targets[Math.floor(Math.random()*targets.length)];
+        const els = document.querySelectorAll(sel);
+        if (els.length) {
+            const el = els[Math.floor(Math.random()*els.length)];
+            el.classList.add('glitch-dom');
+            setTimeout(()=>el.classList.remove('glitch-dom'), 420);
+        }
+        setTimeout(doGlitch, 3500 + Math.random()*7000);
+    }
+    doGlitch();
+}
+
+
+/* ===== DAILY MESSAGE ===== */
+const dailyMsgs = [
+    "// THE SIGNAL PULSES AT MIDNIGHT //",
+    "// TRUST THE FREQUENCY, NOT THE SOURCE //",
+    "// UPLIFTING TRANCE: A WEAPON OF MASS ELEVATION //",
+    "// EVERY DAY A NEW TRANSMISSION //",
+    "// THE FASTRACKER NEVER SLEEPS //",
+    "// MADRID IS THE ORIGIN. THE SIGNAL IS GLOBAL. //",
+    "// REMEMBER: THE TRANCE IS OUT THERE //"
+];
+document.getElementById('daily-msg').textContent = dailyMsgs[new Date().getDay()];
+
+
+/* ===== STATUS CONSOLE ===== */
+const statusMsgs = [
+    "> SCANNING SECTOR_7...",">FASTRACKER_V2 DETECTED...","> THE TRUTH IS IN THE SOUND...",
+    "> REVIEWING HORNA FILES...","> UPLIFTING FREQUENCY LOCKED...","> SIGNAL STRENGTH: 100%...",
+    "> MADRID NODE: TRANSMITTING...","> NEW AGENT DETECTED..."
+];
+setInterval(() => {
+    document.getElementById('status-console').innerText = statusMsgs[Math.floor(Math.random()*statusMsgs.length)];
+    document.getElementById('footer-coords').innerText =
+        `LAT: ${(Math.random()*90).toFixed(4)} N // LON: ${(Math.random()*180).toFixed(4)} W // REF:${Math.random().toString(16).slice(2,6).toUpperCase()}`;
+}, 3000);
+</script>
+</body>
+</html>
