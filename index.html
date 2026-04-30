@@ -160,13 +160,13 @@
             grid-column:1/-1; display:none; padding:12px;
             background:rgba(0,255,65,0.08); border-top:1px dashed var(--green);
             font-family:'VT323'; font-size:1rem; line-height:1.5; color:#fff;
-            white-space: pre-line;
+            white-space: pre-wrap;
         }
 
         /* ======= TERMINAL ======= */
         .terminal-box { background:#000; border:1px solid var(--green); padding:20px; font-family:'VT323'; box-shadow:var(--glow); margin-bottom:40px; }
         .terminal-input { background:transparent; border:none; color:var(--green); font-family:'VT323'; font-size:1.2rem; width:80%; outline:none; }
-        #term-output { margin-top:10px; color:#fff; min-height:60px; white-space:pre-line; }
+        #term-output { margin-top:10px; color:#fff; min-height:60px; white-space:pre-wrap; }
         .term-hint { font-family:'VT323'; font-size:0.82rem; opacity:0.45; margin-bottom:8px; }
 
         /* ======= ACCESS CODE ======= */
@@ -207,7 +207,6 @@
 </head>
 <body>
 
-<!-- BOOT SCREEN -->
 <div id="boot-screen">
     <div id="boot-lines"></div>
 </div>
@@ -237,18 +236,16 @@
     <div id="daily-msg"></div>
 </section>
 
-<!-- RADAR -->
 <div id="radar-section">
     <div id="radar-title">[ SIGNAL_PROPAGATION_MAP // ORIGIN: MADRID ]</div>
     <canvas id="radar-canvas" width="280" height="280"></canvas>
     <div class="signal-stats">
         <div class="stat-item"><span class="stat-value">138</span><span class="stat-label">BPM FREQ</span></div>
         <div class="stat-item"><span class="stat-value">6</span><span class="stat-label">TRANSMISSIONS</span></div>
-        <div class="stat-item"><span class="stat-value">&#8734;</span><span class="stat-label">SIGNAL RANGE</span></div>
+        <div class="stat-item"><span class="stat-value">∞</span><span class="stat-label">SIGNAL RANGE</span></div>
     </div>
 </div>
 
-<!-- COUNTER -->
 <div id="transmission-counter">
     <div class="counter-value" id="counter-display">000,000</div>
     <div class="counter-label">TRANSMISSIONS INTERCEPTED WORLDWIDE</div>
@@ -276,17 +273,15 @@
     <div id="tracks-list"></div>
 </section>
 
-<!-- TERMINAL -->
 <section>
     <div class="terminal-box">
         <div>KONJURA_OS v1.0.4 — ENTER COMMAND:</div>
-        <div class="term-hint">[ HELP ] [ STATUS ] [ INFO ] [ SCAN ] [ DECRYPT ] [ HORNA ] [ PLAY &lt;song&gt; ] [ CLEAR ]</div>
-        <span style="color:var(--green)">&gt; </span><input type="text" id="term-input" class="terminal-input" autocomplete="off" placeholder="...">
+        <div class="term-hint">[ HELP ] [ STATUS ] [ INFO ] [ SCAN ] [ DECRYPT ] [ HORNA ] [ PLAY <song> ] [ CLEAR ]</div>
+        <span style="color:var(--green)">> </span><input type="text" id="term-input" class="terminal-input" autocomplete="off" placeholder="...">
         <div id="term-output"></div>
     </div>
 </section>
 
-<!-- ACCESS CODE -->
 <div id="access-section">
     <div class="access-box">
         <div style="font-family:'VT323'; font-size:1rem; color:var(--red);">
@@ -524,23 +519,80 @@ function toggleInfo(btn, id) {
 }
 
 
-/* ===== TERMINAL ===== */
+/* ===== TERMINAL DATABASE EXPANDIDA ===== */
+const cmdDB = {
+    HELP: [
+        "COMMANDS AVAILABLE: STATUS / INFO / SCAN / DECRYPT / HORNA / PLAY <song> / CLEAR",
+        "SYSTEM ADVISORY: Access Terminal below requires specific song codenames.",
+        "Pro-tip: The 'STATUS' command monitors real-time node fluctuations.",
+        "If the signal is weak, use 'SCAN' to recalibrate the frequency.",
+        "Unauthorized access to 'HORNA' archives is strictly monitored."
+    ],
+    STATUS: [
+        "SYSTEM NOMINAL. Trance signal integrity at 100%. Node: Madrid.",
+        "WARNING: Sonic radiation levels exceeding safety parameters. Maintain volume.",
+        "SIGNAL INTEGRITY: 100%. FastTracker II engine: RUNNING. Buffer stable.",
+        "Atmospheric interference detected, but the Uplifting frequency remains locked.",
+        "CPU LOAD: 2%. Consciousness core: ACTIVE. Waiting for transmission.",
+        "Madrid Node: STABLE. All sectors clear. Eternal Trance protocol engaged.",
+        "Sub-bass oscillation detected. Calibration complete. Ready for deployment.",
+        "Tracking 6 active transmissions. Origin point: Madrid Underground.",
+        "Latency: 0ms. We are not just hearing the sound; we are the sound.",
+        "Hardware check: Roland JP-8080 emulation active. Virtual analog levels optimized."
+    ],
+    INFO: [
+        "KONJURA: Entity identified during the golden era of trackers.",
+        "Subject originated in the 90s, shaping frequencies for the digital underground.",
+        "Classification: Uplifting Trance Intelligence. Location: Madrid Node.",
+        "Legacy data confirms usage of FastTracker II for early compositions.",
+        "The trance is not a genre; it is a communication protocol for the mind.",
+        "Project KONJURA: A bridge between analog nostalgia and future synthesis.",
+        "Records indicate 'Across Your Mind' was the first successful wide-range broadcast.",
+        "Historical data: Subject has been operating in the shadows for over two decades.",
+        "Neural patterns match the 138 BPM frequency perfectly.",
+        "Konjura's core: A blend of ethereal melodies and aggressive basslines."
+    ],
+    SCAN: [
+        "SCANNING SECTOR 7... 6 Audio files declassified. Integrity: HIGH.",
+        "Deep scan complete. Trance frequency detected at 138 BPM in all sectors.",
+        "Scanning digital footprint... Konjura is present in every packet of data.",
+        "Signal strength: 100%. No decryption keys required for basic archives.",
+        "Matrix rain analysis: Nominal. The code is flowing as intended.",
+        "Analyzing sound waves... High energy peaks detected near Madrid sector.",
+        "Scanning for observers... You are not the only one listening.",
+        "Frequency sweep complete. Uplifting energy detected in 98% of the network.",
+        "Peripheral scan: 808-OS is running at peak performance.",
+        "Scanning archives... Found references to 'FastTracker' and 'XM' formats."
+    ],
+    DECRYPT: [
+        "DECRYPTING... 01001011 01001111 01001110 01001010 01010101 01010010 01000001",
+        "DECODED: K-O-N-J-U-R-A. The signal has always been there.",
+        "Decryption successful. 'The Trance is Out There' is a fact, not a theory.",
+        "Extracting hidden metadata... Found encrypted message: 'TRUST THE SIGNAL'.",
+        "Bypassing firewalls... Accessing the heart of the melody.",
+        "Decryption level 4 active. Shadow protocols are now visible to the operator.",
+        "Binary translation complete: 'Sound is the only universal language'.",
+        "Decoding transmission... The constellation of Orion is the key.",
+        "Encryption broken. The truth is much louder than the silence.",
+        "Packet inspection complete. All data points to an imminent uplifting event."
+    ],
+    HORNA: [
+        "LOADING HORNA_MAGAZINE DATABASE... Found reference to 'Across Your Mind'.",
+        "Horna Magazine (Poland) cited Konjura as a defining force in trance.",
+        "Polish archives confirm: Konjura's sound challenged the logic of the time.",
+        "Full quote from Horna: [CLASSIFIED — INCREASE CLEARANCE TO LEVEL 5].",
+        "Historical record: Horna Magazine was the first to document the signal.",
+        "Reference ID: 808-POL-TRK. Topic: The evolution of the Madrid Node.",
+        "Archive recovered: 'Konjura represents the purest form of Uplifting Trance'.",
+        "Polish intelligence reports indicate the signal reached Warsaw in 2026.",
+        "Cross-referencing Horna data with FastTracker logs... Match found.",
+        "Horna database entry: 'Across Your Mind' remains a catalyst for the scene."
+    ]
+};
+
 const termInput = document.getElementById('term-input');
 const termOutput = document.getElementById('term-output');
 const songNames = songsData.map(s => s.name.toUpperCase());
-
-const cmdDB = {
-    HELP:    ["COMMANDS: STATUS / INFO / SCAN / DECRYPT / HORNA / PLAY <song> / CLEAR\nTIP: All song names work in the ACCESS TERMINAL below."],
-    STATUS:  ["SYSTEM NOMINAL. TRANCE SIGNAL AT 100%.\nMADRID NODE: ACTIVE. ALL SECTORS CLEAR.",
-              "WARNING: HIGH SONIC RADIATION. DO NOT LOWER VOLUME.",
-              "SIGNAL INTEGRITY: 100%. FASTRACKER ENGINE: RUNNING."],
-    ACCESS:  ["ERROR: LEVEL 5 REQUIRED. TRACING IP...","ACCESS DENIED. TRUST NO ONE.","ATTEMPT LOGGED. AGENT FLAGGED."],
-    INFO:    ["KONJURA: PROJECT STARTED IN THE FASTRACKER ERA.\nDetected by HORNA MAGAZINE.\nDecades operating from the shadows.",
-              "CLASSIFICATION: UPLIFTING TRANCE ENTITY\nORIGIN: MADRID, SPAIN\nFIRST SIGNAL: FASTRACKER v2 ERA"],
-    SCAN:    ["SCANNING...\n6 AUDIO FILES DECLASSIFIED.\nUPLIFTING FREQUENCY: 138 BPM CONFIRMED.\nMATRIX RAIN: NOMINAL."],
-    DECRYPT: ["DECRYPTING SIGNAL...\n01001011 01001111 01001110 01001010 01010101 01010010 01000001\n\nDECODED: K-O-N-J-U-R-A\n\nThe signal was always there. You just needed to listen."],
-    HORNA:   ["LOADING HORNA_MAGAZINE DATABASE...\n\nReference found: KONJURA cited as emerging Uplifting Trance force.\nFull quote: [CLASSIFIED — LEVEL 5 REQUIRED]\n\nSeek higher clearance to access full record."]
-};
 
 termInput.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
@@ -590,15 +642,18 @@ accessInput.addEventListener('keydown', e => {
 });
 
 
-/* ===== TYPE EFFECT ===== */
+/* ===== TYPE EFFECT - CORREGIDO ===== */
 function typeText(el, text) {
-    el.innerText = '';
+    el.textContent = ''; 
     let i = 0;
     const iv = setInterval(() => {
-        el.innerText += text[i] ?? '';
-        i++;
-        if (i >= text.length) clearInterval(iv);
-    }, 14);
+        if (i < text.length) {
+            el.textContent += text.charAt(i); 
+            i++;
+        } else {
+            clearInterval(iv);
+        }
+    }, 20); // Ajustado a 20ms para un efecto más natural de IA
 }
 
 
